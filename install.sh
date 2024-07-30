@@ -22,29 +22,6 @@ echo \
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
-# 安装DMS
-DMS_GITHUB_URL="https://raw.githubusercontent.com/docker-mailserver/docker-mailserver/master"
-wget "${DMS_GITHUB_URL}/compose.yaml"
-wget "${DMS_GITHUB_URL}/mailserver.env"
-wget "${DMS_GITHUB_URL}/setup.sh"
-chmod a+x ./setup.sh
-
-# 替换配置信息
-sed -i "s/example.com/$DomainName/g" compose.yaml
-sed -i "s/ENABLE_RSPAMD=0/ENABLE_RSPAMD=1/g" mailserver.env
-sed -i "s/ENABLE_OPENDKIM=1/ENABLE_OPENDKIM=0/g" mailserver.env
-
-# 启动Docker Mail Server
-docker compose up -d
-
-# 添加邮箱账户和配置DKIM
-./setup.sh email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
-./setup.sh config dkim keysize 1024 domain $DomainName
-
-# 读取 DKIM DNS 记录
-docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
-DkimRecord=$(cat rsa-1024-mail-${DomainName}.public.dns.txt)
-
 # 配置阿里云 CLI
 curl -O -fsSL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
 tar zxf aliyun-cli-linux-latest-amd64.tgz
@@ -69,12 +46,12 @@ done
 
 echo "所有DNS记录已成功从阿里云删除。"
 
-# DKIM 记录
+# A记录
 aliyun alidns AddDomainRecord \
   --DomainName $DomainName \
-  --RR "mail._domainkey" \
-  --Type TXT \
-  --Value "$DkimRecord" \
+  --RR "mail" \
+  --Type A \
+  --Value "$ServerIp" \
   --TTL 600
 
 # SPF 记录
@@ -93,14 +70,6 @@ aliyun alidns AddDomainRecord \
   --Value "v=DMARC1; p=quarantine; sp=r; pct=100; aspf=r; adkim=s" \
   --TTL 600
 
-# A记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "mail" \
-  --Type A \
-  --Value "$ServerIp" \
-  --TTL 600
-
 # MX 记录
 aliyun alidns AddDomainRecord \
   --DomainName $DomainName \
@@ -110,5 +79,42 @@ aliyun alidns AddDomainRecord \
   --Priority 10 \
   --TTL 600
 
+#TLS
+docker run --rm -it \
+  -v "${PWD}/docker-data/certbot/certs/:/etc/letsencrypt/" \
+  -v "${PWD}/docker-data/certbot/logs/:/var/log/letsencrypt/" \
+  -p 80:80 \
+  certbot/certbot certonly --standalone -d mail.${DomainName} -m ${Postmaster}@${DomainName} --agree-tos --no-eff-email
+
+# 安装DMS
+DMS_GITHUB_URL="https://raw.githubusercontent.com/dkkazy001/DMS-install/main"
+wget "${DMS_GITHUB_URL}/compose.yaml"
+wget "${DMS_GITHUB_URL}/mailserver.env"
+wget "${DMS_GITHUB_URL}/setup.sh"
+chmod a+x ./setup.sh
+
+# 替换配置信息
+sed -i "s/example.com/$DomainName/g" compose.yaml
+sed -i "s/ENABLE_RSPAMD=0/ENABLE_RSPAMD=1/g" mailserver.env
+sed -i "s/ENABLE_OPENDKIM=1/ENABLE_OPENDKIM=0/g" mailserver.env
+
+# 启动Docker Mail Server
+docker compose up -d
+
+# 添加邮箱账户和配置DKIM
+./setup.sh email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
+./setup.sh config dkim keysize 1024 domain $DomainName
+
+# 读取 DKIM DNS 记录
+docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
+DkimRecord=$(cat rsa-1024-mail-${DomainName}.public.dns.txt)
+
+# DKIM 记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "mail._domainkey" \
+  --Type TXT \
+  --Value "$DkimRecord" \
+  --TTL 600
 echo "所有DNS记录已成功添加到阿里云。"
 echo "完成！！！"
