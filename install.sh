@@ -34,10 +34,45 @@ aliyun configure set \
         --access-key-id $AccessKeyId \
         --access-key-secret $AccessKeySecret
 
+#设置DNS 8.8.8.8 1.1.1.1 114.114.114.114
+# 设置要使用的 DNS 服务器
+DNS_SERVERS="8.8.8.8 1.1.1.1 114.114.114.114"
+
+# 判断 netplan 是否存在
+if command -v netplan > /dev/null; then
+    # 查找 netplan 配置文件
+    NETPLAN_FILE=$(ls /etc/netplan/*.yaml)
+
+    # 备份原始 netplan 配置文件
+    sudo cp $NETPLAN_FILE ${NETPLAN_FILE}.bak
+
+    # 修改 netplan 配置文件
+    sudo sed -i "/^ *nameservers:/{n;d}" $NETPLAN_FILE
+    sudo sed -i "/^ *dhcp4: true/a\        nameservers:\n          addresses: [$DNS_SERVERS]" $NETPLAN_FILE
+
+    # 应用 netplan 配置
+    sudo netplan apply
+
+    echo "DNS 设置已使用 netplan 修改为: $DNS_SERVERS"
+
+# 判断 systemd-resolved 是否存在
+elif command -v systemctl > /dev/null && systemctl is-active systemd-resolved > /dev/null; then
+    # 修改 /etc/systemd/resolved.conf 文件
+    sudo sed -i "/^DNS=/d" /etc/systemd/resolved.conf
+    echo "DNS=$DNS_SERVERS" | sudo tee -a /etc/systemd/resolved.conf
+
+    # 重启 systemd-resolved 服务
+    sudo systemctl restart systemd-resolved
+
+    echo "DNS 设置已使用 systemd-resolved 修改为: $DNS_SERVERS"
+else
+    echo "未检测到 netplan 或 systemd-resolved，请手动配置 DNS 设置。"
+fi
+
 # 列出所有DNS记录并删除
 
 # 获取所有记录的RecordId
-RecordIds=$(aliyun alidns DescribeDomainRecords --DomainName $DomainName --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}')
+RecordIds=$(aliyun alidns DescribeDomainRecords --DomainName britmums.net --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}')
 
 # 遍历所有RecordId并删除记录
 for RecordId in $RecordIds; do
@@ -80,11 +115,11 @@ aliyun alidns AddDomainRecord \
   --TTL 600
 
 #TLS
-docker run --rm -it \
+docker run --rm \
   -v "${PWD}/docker-data/certbot/certs/:/etc/letsencrypt/" \
   -v "${PWD}/docker-data/certbot/logs/:/var/log/letsencrypt/" \
   -p 80:80 \
-  certbot/certbot certonly --standalone -d mail.${DomainName} -m ${Postmaster}@${DomainName} --agree-tos --no-eff-email
+  certbot/certbot certonly --standalone -d mail.${DomainName} --agree-tos --no-eff-email --register-unsafely-without-email 
 
 # 安装DMS
 DMS_GITHUB_URL="https://raw.githubusercontent.com/dkkazy001/DMS-install/main"
