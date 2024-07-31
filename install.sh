@@ -137,7 +137,9 @@ sed -i "s/ENABLE_OPENDKIM=1/ENABLE_OPENDKIM=0/g" mailserver.env
 docker compose up -d
 
 # 添加邮箱账户和配置DKIM
+sleep 5
 ./setup.sh email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
+sleep 5
 ./setup.sh config dkim keysize 1024 domain $DomainName
 
 # 读取 DKIM DNS 记录
