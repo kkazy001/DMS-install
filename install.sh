@@ -72,7 +72,7 @@ fi
 # 列出所有DNS记录并删除
 
 # 获取所有记录的RecordId
-RecordIds=$(aliyun alidns DescribeDomainRecords --DomainName britmums.net --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}')
+RecordIds=$(aliyun alidns DescribeDomainRecords --DomainName $DomainName --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}')
 
 # 遍历所有RecordId并删除记录
 for RecordId in $RecordIds; do
