@@ -156,3 +156,4 @@ aliyun alidns AddDomainRecord \
   --TTL 600
 echo "所有DNS记录已成功添加到阿里云。"
 echo "完成！！！"
+mail.${DomainName},587,FALSE,account-update@${DomainName},6c9W9LM65eGjM7tmHv
