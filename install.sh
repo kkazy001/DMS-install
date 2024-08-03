@@ -7,6 +7,26 @@ AccessKeyId=$3
 AccessKeySecret=$4
 Postmaster=$5
 
+if [ -z "$DomainName" ] || [ -z "$ServerIp" ] || [ -z "$AccessKeyId" ] || [ -z "$AccessKeySecret" ] || [ -z "$Postmaster" ]; then
+  echo "Usage: $0 <DomainName> <ServerIp> <AccessKeyId> <AccessKeySecret> <Postmaster>"
+  exit 1
+fi
+#环境检查 ubtuntu 20
+if [ $(lsb_release -cs) != "focal" ]; then
+  echo "This script is only supported on Ubuntu 20.04."
+  exit 1
+fi
+#80端口检查
+if lsof -i:80; then
+  echo "Port 80 is already in use. Please stop the service and try again."
+  exit 1
+fi
+
+# 创建文件夹
+mkdir -p ~/docker-mailserver
+cd ~/docker-mailserver
+rm -rf ./*
+
 # 安装Docker
 sudo apt-get update
 sudo apt-get install ca-certificates curl -y
@@ -22,6 +42,9 @@ echo \
 sudo apt-get update
 sudo apt-get install docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin -y
 
+# 删除所有容器
+docker rm -f $(docker ps -a -q)
+
 # 配置阿里云 CLI
 curl -O -fsSL https://aliyuncli.alicdn.com/aliyun-cli-linux-latest-amd64.tgz
 tar zxf aliyun-cli-linux-latest-amd64.tgz
@@ -34,43 +57,7 @@ aliyun configure set \
         --access-key-id $AccessKeyId \
         --access-key-secret $AccessKeySecret
 
-#设置DNS 8.8.8.8 1.1.1.1 114.114.114.114
-# 设置要使用的 DNS 服务器
-DNS_SERVERS="8.8.8.8 1.1.1.1 114.114.114.114"
-
-# 判断 netplan 是否存在
-if command -v netplan > /dev/null; then
-    # 查找 netplan 配置文件
-    NETPLAN_FILE=$(ls /etc/netplan/*.yaml)
-
-    # 备份原始 netplan 配置文件
-    sudo cp $NETPLAN_FILE ${NETPLAN_FILE}.bak
-
-    # 修改 netplan 配置文件
-    sudo sed -i "/^ *nameservers:/{n;d}" $NETPLAN_FILE
-    sudo sed -i "/^ *dhcp4: true/a\        nameservers:\n          addresses: [$DNS_SERVERS]" $NETPLAN_FILE
-
-    # 应用 netplan 配置
-    sudo netplan apply
-
-    echo "DNS 设置已使用 netplan 修改为: $DNS_SERVERS"
-
-# 判断 systemd-resolved 是否存在
-elif command -v systemctl > /dev/null && systemctl is-active systemd-resolved > /dev/null; then
-    # 修改 /etc/systemd/resolved.conf 文件
-    sudo sed -i "/^DNS=/d" /etc/systemd/resolved.conf
-    echo "DNS=$DNS_SERVERS" | sudo tee -a /etc/systemd/resolved.conf
-
-    # 重启 systemd-resolved 服务
-    sudo systemctl restart systemd-resolved
-
-    echo "DNS 设置已使用 systemd-resolved 修改为: $DNS_SERVERS"
-else
-    echo "未检测到 netplan 或 systemd-resolved，请手动配置 DNS 设置。"
-fi
-
 # 列出所有DNS记录并删除
-
 # 获取所有记录的RecordId
 RecordIds=$(aliyun alidns DescribeDomainRecords --DomainName $DomainName --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}')
 
@@ -156,4 +143,4 @@ aliyun alidns AddDomainRecord \
   --TTL 600
 echo "所有DNS记录已成功添加到阿里云。"
 echo "完成！！！"
-echo mail.${DomainName},587,True,account-update@${DomainName},6c9W9LM65eGjM7tmHv
+echo mail.${DomainName},587,True,$Postmaster@${DomainName},6c9W9LM65eGjM7tmHv
