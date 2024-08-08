@@ -64,12 +64,37 @@ aliyun alidns DescribeDomainRecords --DomainName $DomainName --output cols=Recor
 
 echo "所有DNS记录已成功从阿里云删除。"
 
+# A记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "mail" \
+  --Type A \
+  --Value "${ips[0]}" \
+  --TTL 600
+
+# DMARC 记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "_dmarc" \
+  --Type TXT \
+  --Value "v=DMARC1; p=quarantine; sp=r; pct=100; aspf=r; adkim=s" \
+  --TTL 600
+
+# MX 记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "@" \
+  --Type MX \
+  --Value "mail.${DomainName}" \
+  --Priority 10 \
+  --TTL 600
+
 # TLS
 docker run --rm \
   -v "${PWD}/docker-data/certbot/certs/:/etc/letsencrypt/" \
   -v "${PWD}/docker-data/certbot/logs/:/var/log/letsencrypt/" \
   -p 80:80 \
-  certbot/certbot certonly --standalone -d mail.${DomainName} --agree-tos --no-eff-email --register-unsafely-without-email 
+  certbot/certbot certonly --standalone -d mail.bcs-study.net --agree-tos --no-eff-email --register-unsafely-without-email 
 
 # 安装DMS
 DMS_GITHUB_URL="https://raw.githubusercontent.com/kkazy001/DMS-install/main"
@@ -132,30 +157,7 @@ spf_record+=" -all"
 # 添加SPF记录
 aliyun alidns AddDomainRecord --DomainName $DomainName --RR "@" --Type TXT --Value "$spf_record" --TTL 600
 
-# A记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "mail" \
-  --Type A \
-  --Value "${ips[0]}" \
-  --TTL 600
 
-# DMARC 记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "_dmarc" \
-  --Type TXT \
-  --Value "v=DMARC1; p=quarantine; sp=r; pct=100; aspf=r; adkim=s" \
-  --TTL 600
-
-# MX 记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "@" \
-  --Type MX \
-  --Value "mail.${DomainName}" \
-  --Priority 10 \
-  --TTL 600
 
 echo "完成！！！"
 echo mail.${DomainName},587,True,$Postmaster@${DomainName},6c9W9LM65eGjM7tmHv
