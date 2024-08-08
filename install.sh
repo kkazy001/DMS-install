@@ -133,7 +133,7 @@ docker run --rm \
   -v "${PWD}/docker-data/certbot/logs/:/var/log/letsencrypt/" \
   -p 80:80 \
   --net=host \
-  certbot/certbot certonly --standalone -d mail.bcs-study.net --agree-tos --no-eff-email --register-unsafely-without-email 
+  certbot/certbot certonly --standalone -d mail.${DomainName} --agree-tos --no-eff-email --register-unsafely-without-email -v
 
 # 安装DMS
 DMS_GITHUB_URL="https://raw.githubusercontent.com/kkazy001/DMS-install/main"
