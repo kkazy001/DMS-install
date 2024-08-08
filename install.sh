@@ -2,21 +2,23 @@
 
 # 参数
 DomainName=$1
-ServerIp=$2
+IPFilePath=$2
 AccessKeyId=$3
 AccessKeySecret=$4
 Postmaster=$5
 
-if [ -z "$DomainName" ] || [ -z "$ServerIp" ] || [ -z "$AccessKeyId" ] || [ -z "$AccessKeySecret" ] || [ -z "$Postmaster" ]; then
-  echo "Usage: $0 <DomainName> <ServerIp> <AccessKeyId> <AccessKeySecret> <Postmaster>"
+if [ -z "$DomainName" ] || [ -z "$IPFilePath" ] || [ -z "$AccessKeyId" ] || [ -z "$AccessKeySecret" ] || [ -z "$Postmaster" ]; then
+  echo "Usage: $0 <DomainName> <IPFilePath> <AccessKeyId> <AccessKeySecret> <Postmaster>"
   exit 1
 fi
-#环境检查 ubtuntu 20
+
+# 环境检查 Ubuntu 20
 if [ $(lsb_release -cs) != "focal" ]; then
   echo "This script is only supported on Ubuntu 20.04."
   exit 1
 fi
-#80端口检查
+
+# 80端口检查
 if lsof -i:80; then
   echo "Port 80 is already in use. Please stop the service and try again."
   exit 1
@@ -57,51 +59,12 @@ aliyun configure set \
         --access-key-id $AccessKeyId \
         --access-key-secret $AccessKeySecret
 
-# 列出所有DNS记录并删除
-# 获取所有记录的RecordId
-RecordIds=$(aliyun alidns DescribeDomainRecords --DomainName $DomainName --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}')
-
 # 遍历所有RecordId并删除记录
-for RecordId in $RecordIds; do
-  aliyun alidns DeleteDomainRecord --RecordId $RecordId
-done
+aliyun alidns DescribeDomainRecords --DomainName $DomainName --output cols=RecordId rows=DomainRecords.Record[] | awk 'NR>2 {print $1}' | xargs -I {} aliyun alidns DeleteDomainRecord --RecordId {}
 
 echo "所有DNS记录已成功从阿里云删除。"
 
-# A记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "mail" \
-  --Type A \
-  --Value "$ServerIp" \
-  --TTL 600
-
-# SPF 记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "@" \
-  --Type TXT \
-  --Value "v=spf1 ip4:$ServerIp -all" \
-  --TTL 600
-
-# DMARC 记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "_dmarc" \
-  --Type TXT \
-  --Value "v=DMARC1; p=quarantine; sp=r; pct=100; aspf=r; adkim=s" \
-  --TTL 600
-
-# MX 记录
-aliyun alidns AddDomainRecord \
-  --DomainName $DomainName \
-  --RR "@" \
-  --Type MX \
-  --Value "mail.${DomainName}" \
-  --Priority 10 \
-  --TTL 600
-
-#TLS
+# TLS
 docker run --rm \
   -v "${PWD}/docker-data/certbot/certs/:/etc/letsencrypt/" \
   -v "${PWD}/docker-data/certbot/logs/:/var/log/letsencrypt/" \
@@ -127,7 +90,7 @@ docker compose up -d
 docker exec mailserver setup email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
 docker exec mailserver setup config dkim keysize 1024 domain $DomainName
 sleep 5
-#玄学
+# 玄学
 docker exec mailserver setup config dkim keysize 1024 domain $DomainName
 
 # 读取 DKIM DNS 记录
@@ -142,5 +105,57 @@ aliyun alidns AddDomainRecord \
   --Value "$DkimRecord" \
   --TTL 600
 echo "所有DNS记录已成功添加到阿里云。"
+
+# 清除已有的POSTROUTING规则，防止重复添加
+iptables -t nat -F POSTROUTING
+
+# 读取IP地址数组
+mapfile -t ips < "$IPFilePath"
+
+# 计算数组长度
+num_ips=${#ips[@]}
+
+# 添加SNAT规则
+for i in ${!ips[@]}; do
+  ip=${ips[$i]}
+  # 使用--every num_ips 确保每 num_ips 个包使用一个不同的IP地址
+  iptables -t nat -A POSTROUTING -o eno1 -p tcp -m state --state NEW -m tcp --dport 25 -m statistic --mode nth --every $num_ips --packet $i -j SNAT --to-source $ip
+done
+
+# 组装SPF记录
+spf_record="v=spf1"
+for ip in "${ips[@]}"; do
+  spf_record+=" ip4:$ip"
+done
+spf_record+=" -all"
+
+# 添加SPF记录
+aliyun alidns AddDomainRecord --DomainName $DomainName --RR "@" --Type TXT --Value "$spf_record" --TTL 600
+
+# A记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "mail" \
+  --Type A \
+  --Value "${ips[0]}" \
+  --TTL 600
+
+# DMARC 记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "_dmarc" \
+  --Type TXT \
+  --Value "v=DMARC1; p=quarantine; sp=r; pct=100; aspf=r; adkim=s" \
+  --TTL 600
+
+# MX 记录
+aliyun alidns AddDomainRecord \
+  --DomainName $DomainName \
+  --RR "@" \
+  --Type MX \
+  --Value "mail.${DomainName}" \
+  --Priority 10 \
+  --TTL 600
+
 echo "完成！！！"
 echo mail.${DomainName},587,True,$Postmaster@${DomainName},6c9W9LM65eGjM7tmHv
