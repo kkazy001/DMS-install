@@ -70,6 +70,18 @@ iptables -t nat -F POSTROUTING
 # 读取IP地址数组
 mapfile -t ips < "$IPFilePath"
 
+# 去除每个IP地址中的CR字符
+for i in "${!ips[@]}"; do
+  ips[$i]=$(echo "${ips[$i]}" | tr -d '\r')
+done
+
+for ip in "${ips[@]}"; do
+  if [[ ! $ip =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}$ ]]; then
+    echo "Invalid IP address format: $ip"
+    exit 1
+  fi
+done
+
 # 计算数组长度
 num_ips=${#ips[@]}
 
