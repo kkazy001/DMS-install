@@ -209,5 +209,5 @@ docker compose restart
 echo "Docker Mail Server 安装完成。"
 
 for DomainName in "${domains[@]}"; do
-  echo mail.${DomainName},587,True,$Postmaster@${DomainName},6c9W9LM65eGjM7tmHv
+  echo mail.${domains[0]},587,tls,$Postmaster@${DomainName},6c9W9LM65eGjM7tmHv
 done
