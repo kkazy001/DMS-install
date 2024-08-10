@@ -184,7 +184,7 @@ for DomainName in "${domains[@]}"; do
 
   # 要添加的域名和相关配置
   NEW_DOMAIN="${DomainName}"
-  NEW_PATH="/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.key"
+  NEW_PATH="/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.private.txt"
   NEW_SELECTOR="mail"
 
   # 文件路径
@@ -195,7 +195,7 @@ for DomainName in "${domains[@]}"; do
       echo "Domain $NEW_DOMAIN already exists in the configuration file."
   else
       # 添加新的域名配置
-      sed -i "/^domain {/a \ \ \ \ $NEW_DOMAIN {\n\ \ \ \ \ \ \ \ path = \"$NEW_PATH\";\n\ \ \ \ \ \ \ \ selector = \"$NEW_SELECTOR\";\n\ \ \ \ }" "$CONFIG_FILE"
+      sed -i "/^domain {/a \ \ \ \ $NEW_DOMAIN {\n\ \ \ \ \ \ \ \ path = \"$NEW_PATH\";\n\ \ \ \ \ \ \ \ selector = \"$NEW_SELECTOR\";\n\ \ \ \ }," "$CONFIG_FILE"
       echo "Domain $NEW_DOMAIN added to the configuration file."
   fi
 
