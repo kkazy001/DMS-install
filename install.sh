@@ -195,7 +195,7 @@ for DomainName in "${domains[@]}"; do
       echo "Domain $NEW_DOMAIN already exists in the configuration file."
   else
       # 添加新的域名配置
-      sed -i "/^domain {/a \ \ \ \ $NEW_DOMAIN {\n\ \ \ \ \ \ \ \ path = \"$NEW_PATH\";\n\ \ \ \ \ \ \ \ selector = \"$NEW_SELECTOR\";\n\ \ \ \ }," "$CONFIG_FILE"
+      sed -i "/^domain {/a \ \ \ \ $NEW_DOMAIN {\n\ \ \ \ \ \ \ \ path = \"$NEW_PATH\";\n\ \ \ \ \ \ \ \ selector = \"$NEW_SELECTOR\";\n\ \ \ \ }" "$CONFIG_FILE"
       echo "Domain $NEW_DOMAIN added to the configuration file."
   fi
 
