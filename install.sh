@@ -163,12 +163,11 @@ for DomainName in "${domains[@]}"; do
   docker compose up -d
 
   # 添加邮箱账户和配置DKIM
+  sleep 5
   docker exec mailserver setup email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
-  sleep 5
   docker exec mailserver setup config dkim keysize 1024 domain $DomainName
-  sleep 5
   # 玄学
-  docker exec mailserver setup config dkim keysize 1024 domain $DomainName
+  # docker exec mailserver setup config dkim keysize 1024 domain $DomainName
 
   # 读取 DKIM DNS 记录
   docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
@@ -204,6 +203,9 @@ for DomainName in "${domains[@]}"; do
 done
 
 echo "全部域名处理完成。"
+
+#sed allow_username_mismatch = true;/n后面加上allow_hdrfrom_mismatch = true;
+sed -i 's/allow_username_mismatch = true;/allow_username_mismatch = true;\nallow_hdrfrom_mismatch = true;/g' /root/docker-mailserver/docker-data/dms/config/rspamd/override.d/dkim_signing.conf
 
 docker compose restart
 
