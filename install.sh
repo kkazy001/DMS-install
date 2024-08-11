@@ -163,11 +163,11 @@ for DomainName in "${domains[@]}"; do
   docker compose up -d
 
   # 添加邮箱账户和配置DKIM
-  sleep 5
   docker exec mailserver setup email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
   docker exec mailserver setup config dkim keysize 1024 domain $DomainName
   # 玄学
-  # docker exec mailserver setup config dkim keysize 1024 domain $DomainName
+  sleep 5
+  docker exec mailserver setup config dkim keysize 1024 domain $DomainName
 
   # 读取 DKIM DNS 记录
   docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
