@@ -115,7 +115,7 @@ docker run --rm \
   certbot/certbot certonly --standalone -d mail.${domains[0]} --agree-tos --no-eff-email --register-unsafely-without-email -v
 
 # 安装DMS
-DMS_GITHUB_URL="https://raw.githubusercontent.com/kkazy001/DMS-install/main"
+DMS_GITHUB_URL="https://raw.githubusercontent.com/flyrenxing/DMS-install/main"
 wget "${DMS_GITHUB_URL}/compose.yaml"
 wget "${DMS_GITHUB_URL}/mailserver.env"
 wget "${DMS_GITHUB_URL}/setup.sh"
