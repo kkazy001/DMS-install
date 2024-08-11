@@ -168,7 +168,7 @@ for DomainName in "${domains[@]}"; do
   # 玄学
   sleep 5
   docker exec mailserver setup config dkim keysize 1024 domain $DomainName
-  echo "DKIM 配置已成功添加到Docker Mail Server。（为了玄学可能会有一个错误警告可忽略）"
+
   # 读取 DKIM DNS 记录
   docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
   DkimRecord=$(cat rsa-1024-mail-${DomainName}.public.dns.txt)
@@ -206,7 +206,9 @@ echo "全部域名处理完成。"
 
 #复制/docker-data/dms/config/rspamd/override.d/dkim_signing.conf到容器/etc/rspamd/override.d/dkim_signing.conf
 docker cp /root/docker-mailserver/docker-data/dms/config/rspamd/override.d/dkim_signing.conf mailserver:/etc/rspamd/override.d/dkim_signing.conf
-
+docker exec -it mailserver sh -c 'echo "initial_destination_concurrency = 25" >> /etc/postfix/main.cf'
+docker exec -it mailserver sh -c 'echo "default_destination_concurrency_limit = 100" >> /etc/postfix/main.cf'
+docker exec -it mailserver sh -c 'echo "default_process_limit = 500" >> /etc/postfix/main.cf'
 docker compose restart
 
 echo "Docker Mail Server 安装完成。"
