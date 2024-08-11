@@ -149,12 +149,12 @@ for DomainName in "${domains[@]}"; do
     --DomainName $DomainName \
     --RR "@" \
     --Type MX \
-    --Value "mail.${DomainName}" \
+    --Value mail.${domains[0]} \
     --Priority 10 \
     --TTL 600
   # A记录
   aliyun alidns AddDomainRecord \
-  --DomainName ${domains[0]} \
+  --DomainName $DomainName \
   --RR "mail" \
   --Type A \
   --Value "${ips[0]}" \
@@ -164,6 +164,7 @@ for DomainName in "${domains[@]}"; do
 
   # 添加邮箱账户和配置DKIM
   docker exec mailserver setup email add $Postmaster@${DomainName} 6c9W9LM65eGjM7tmHv
+  sleep 5
   docker exec mailserver setup config dkim keysize 1024 domain $DomainName
   sleep 5
   # 玄学
