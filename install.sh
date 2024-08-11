@@ -168,7 +168,7 @@ for DomainName in "${domains[@]}"; do
   # 玄学
   sleep 5
   docker exec mailserver setup config dkim keysize 1024 domain $DomainName
-
+  echo "DKIM 配置已成功添加到Docker Mail Server。（为了玄学可能会有一个错误警告可忽略）"
   # 读取 DKIM DNS 记录
   docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
   DkimRecord=$(cat rsa-1024-mail-${DomainName}.public.dns.txt)
@@ -204,8 +204,8 @@ done
 
 echo "全部域名处理完成。"
 
-#sed allow_username_mismatch = true;/n后面加上allow_hdrfrom_mismatch = true;
-sed -i 's/allow_username_mismatch = true;/allow_username_mismatch = true;\nallow_hdrfrom_mismatch = true;/g' /root/docker-mailserver/docker-data/dms/config/rspamd/override.d/dkim_signing.conf
+#复制/docker-data/dms/config/rspamd/override.d/dkim_signing.conf到容器/etc/rspamd/override.d/dkim_signing.conf
+docker cp /root/docker-mailserver/docker-data/dms/config/rspamd/override.d/dkim_signing.conf mailserver:/etc/rspamd/override.d/dkim_signing.conf
 
 docker compose restart
 
