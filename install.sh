@@ -206,9 +206,9 @@ echo "全部域名处理完成。"
 
 #复制/docker-data/dms/config/rspamd/override.d/dkim_signing.conf到容器/etc/rspamd/override.d/dkim_signing.conf
 docker cp /root/docker-mailserver/docker-data/dms/config/rspamd/override.d/dkim_signing.conf mailserver:/etc/rspamd/override.d/dkim_signing.conf
-docker exec -it mailserver sh -c 'echo "initial_destination_concurrency = 1000" >> /etc/postfix/main.cf'
-docker exec -it mailserver sh -c 'echo "default_destination_concurrency_limit = 4000" >> /etc/postfix/main.cf'
-docker exec -it mailserver sh -c 'echo "default_process_limit = 20000" >> /etc/postfix/main.cf'
+docker exec -it mailserver sh -c 'echo "initial_destination_concurrency = 100000" >> /etc/postfix/main.cf'
+docker exec -it mailserver sh -c 'echo "default_destination_concurrency_limit = 100000" >> /etc/postfix/main.cf'
+docker exec -it mailserver sh -c 'echo "default_process_limit = 100000" >> /etc/postfix/main.cf'
 docker compose restart
 
 echo "Docker Mail Server 安装完成。"
