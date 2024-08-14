@@ -86,7 +86,7 @@ num_ips=${#ips[@]}
 for i in ${!ips[@]}; do
   ip=${ips[$i]}
   # 使用--every num_ips 确保每 num_ips 个包使用一个不同的IP地址
-  iptables -t nat -A POSTROUTING -o eno1 -p tcp -m state --state NEW -m tcp --dport 25 -m statistic --mode nth --every $num_ips --packet $i -j SNAT --to-source $ip
+  iptables -t nat -A POSTROUTING -o eno1 -p tcp -m state --state NEW -m tcp --dport 25 -m statistic --mode nth --every 5 --packet 0 -j SNAT --to-source $ip
 done
 
 # 组装SPF记录
@@ -168,7 +168,7 @@ for DomainName in "${domains[@]}"; do
   # 玄学
   sleep 5
   docker exec mailserver setup config dkim keysize 1024 domain $DomainName
-
+  echo "DKIM 配置已成功添加到阿里云。此处可能有一个错误可忽略"
   # 读取 DKIM DNS 记录
   docker cp mailserver:/tmp/docker-mailserver/rspamd/dkim/rsa-1024-mail-${DomainName}.public.dns.txt ./
   DkimRecord=$(cat rsa-1024-mail-${DomainName}.public.dns.txt)
