@@ -15,6 +15,11 @@ fi
 # 读取域名数组
 mapfile -t domains <"$DomainFilePath"
 
+# 去除每个域名中的CR字符
+for i in "${!domains[@]}"; do
+  domains[$i]=$(echo "${domains[$i]}" | tr -d '\r')
+done
+
 # 检查Ubuntu版本
 if [ $(lsb_release -cs) != "focal" ]; then
   echo "This script is only supported on Ubuntu 20.04."
