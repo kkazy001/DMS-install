@@ -209,6 +209,8 @@ docker cp /root/docker-mailserver/docker-data/dms/config/rspamd/override.d/dkim_
 docker exec mailserver sh -c 'echo "initial_destination_concurrency = 100000" >> /etc/postfix/main.cf'
 docker exec mailserver sh -c 'echo "default_destination_concurrency_limit = 100000" >> /etc/postfix/main.cf'
 docker exec mailserver sh -c 'echo "default_process_limit = 100000" >> /etc/postfix/main.cf'
+docker exec mailserver sh -c 'echo "maximal_queue_lifetime = 0" >> /etc/postfix/main.cf'
+docker exec mailserver sh -c 'echo "bounce_queue_lifetime = 0" >> /etc/postfix/main.cf'
 docker compose restart
 
 echo "Docker Mail Server 安装完成。"
