@@ -113,6 +113,11 @@ docker run --rm \
   -p 80:80 \
   --net=host \
   certbot/certbot certonly --standalone -d mail.${domains[0]} --agree-tos --no-eff-email --register-unsafely-without-email -v
+#if ./docker-data/certbot/certs/ 不存在则退出脚本报错
+if [ ! -d ./docker-data/certbot/certs/ ]; then
+  echo "TLS证书生成失败。"
+  exit 1
+fi
 
 # 安装DMS
 DMS_GITHUB_URL="https://raw.githubusercontent.com/flyrenxing/DMS-install/main"
